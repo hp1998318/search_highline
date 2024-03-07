@@ -1,10 +1,63 @@
-import React from "react";
-
+import React, { useEffect, useRef, useState } from "react";
+import "./App.css";
 function App() {
+  const myRef = useRef<HTMLElement>(null);
+  // const [text, setText] = useState<string>("");
+  const allTextNode: Array<Node> = [];
+  useEffect(() => {
+    // 获取所有节点
+    const treeWalker = document.createTreeWalker(
+      myRef.current as Node,
+      NodeFilter.SHOW_TEXT
+    );
+    let currentNode = treeWalker.nextNode();
+    while (currentNode) {
+      allTextNode.push(currentNode);
+      currentNode = treeWalker.nextNode();
+    }
+  });
+  const textChange = (e: any) => {
+    // 清除之前的 highlights
+    //@ts-ignore
+    CSS.highlights.clear();
+    const text = e.target.value.toLocaleLowerCase();
+    if (text === "") {
+      return;
+    }
+    // 获取区间
+    const ranges = allTextNode
+      .map((el) => {
+        return {
+          el,
+          t: el.textContent?.toLocaleLowerCase(),
+        };
+      })
+      .map(({ el, t }) => {
+        // 记录每个 alltextnode 中符合的目标项
+        const indicet: Array<number> = [];
+        let start = 0;
+        while (start < t!.length) {
+          const index = t!.indexOf(text, start);
+          if (index === -1) break;
+          indicet.push(index);
+          start = index + text.length;
+        }
+        return indicet.map((i) => {
+          const ranges = new Range();
+          ranges.setStart(el, i);
+          ranges.setEnd(el, i + text.length);
+          return ranges;
+        });
+      });
+    //@ts-ignore
+    const searchResultsHighlight = new Highlight(...ranges.flat());
+    //@ts-ignore
+    CSS.highlights.set("search-results", searchResultsHighlight);
+  };
   return (
     <>
-      <input />
-      <article>
+      <input onChange={textChange} />
+      <article ref={myRef}>
         <p>
           阅文旗下囊括 QQ 阅读、<strong>起点中文网</strong>
           、新丽传媒等业界知名品牌，汇聚了强大的创作者阵营、丰富的作品储备，覆盖
